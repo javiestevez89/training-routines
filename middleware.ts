@@ -1,29 +1,33 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
-import { NextRequest, NextResponse } from "next/server"
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import type { Database } from '@/types/database'
 
-// Default Next.js middleware to allow all requests
-export function middleware(request: NextRequest) {
-  return NextResponse.next()
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient<Database>({ req, res })
+
+  // Get the user_email cookie
+  const userEmail = req.cookies.get('user_email')?.value
+
+  // If we have a user_email cookie, treat it as an authenticated session
+  const isAuthenticated = !!userEmail
+
+  // If not authenticated and the current path is not / or /onboarding, redirect to /
+  if (!isAuthenticated && !['/onboarding', '/'].includes(req.nextUrl.pathname)) {
+    console.log('No authentication found, redirecting to homepage')
+    return NextResponse.redirect(new URL('/', req.url))
+  }
+
+  // If authenticated and on homepage, redirect to dashboard
+  if (isAuthenticated && req.nextUrl.pathname === '/') {
+    console.log('User authenticated, redirecting to dashboard')
+    return NextResponse.redirect(new URL('/dashboard', req.url))
+  }
+
+  return res
 }
 
-/**
- * Uncomment the following code to enable authentication with Clerk
- */
-
-// const isProtectedRoute = createRouteMatcher(['/protected'])
-
-// export default clerkMiddleware(async (auth, req) => {
-//     if (isProtectedRoute(req)) {
-//       // Handle protected routes check here
-//       return NextResponse.redirect(req.nextUrl.origin)
-//     }
-
-//     return NextResponse.next()
-// })  
-
 export const config = {
-  matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)|api/webhooks).*)",
-  ],
+  matcher: ['/', '/dashboard/:path*', '/onboarding/:path*'],
 }

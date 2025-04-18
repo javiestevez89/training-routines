@@ -1,9 +1,9 @@
-set
-    check_function_bodies = off;
-
 -- Create custom types
 CREATE TYPE user_goal AS ENUM ('build_muscle', 'lose_fat', 'stay_fit');
 CREATE TYPE experience_level AS ENUM ('beginner', 'intermediate', 'advanced');
+
+-- Enable RLS
+ALTER DATABASE postgres SET "auth.enable_rlspolicies" = on;
 
 -- Create tables
 CREATE TABLE IF NOT EXISTS routines (
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS exercises (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
 );
 
--- Enable RLS on tables
+-- Create RLS policies
 ALTER TABLE routines ENABLE ROW LEVEL SECURITY;
 ALTER TABLE routine_days ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exercises ENABLE ROW LEVEL SECURITY;
@@ -63,30 +63,6 @@ CREATE POLICY "Users can view days of their routines"
         AND routines.user_id = auth.uid()::text
     ));
 
-CREATE POLICY "Users can insert their routine days"
-    ON routine_days FOR INSERT
-    WITH CHECK (EXISTS (
-        SELECT 1 FROM routines
-        WHERE routines.id = routine_days.routine_id
-        AND routines.user_id = auth.uid()::text
-    ));
-
-CREATE POLICY "Users can update their routine days"
-    ON routine_days FOR UPDATE
-    USING (EXISTS (
-        SELECT 1 FROM routines
-        WHERE routines.id = routine_days.routine_id
-        AND routines.user_id = auth.uid()::text
-    ));
-
-CREATE POLICY "Users can delete their routine days"
-    ON routine_days FOR DELETE
-    USING (EXISTS (
-        SELECT 1 FROM routines
-        WHERE routines.id = routine_days.routine_id
-        AND routines.user_id = auth.uid()::text
-    ));
-
 -- Policies for exercises
 CREATE POLICY "Users can view exercises of their routine days"
     ON exercises FOR SELECT
@@ -95,37 +71,4 @@ CREATE POLICY "Users can view exercises of their routine days"
         JOIN routines ON routines.id = routine_days.routine_id
         WHERE routine_days.id = exercises.routine_day_id
         AND routines.user_id = auth.uid()::text
-    ));
-
-CREATE POLICY "Users can insert exercises to their routine days"
-    ON exercises FOR INSERT
-    WITH CHECK (EXISTS (
-        SELECT 1 FROM routine_days
-        JOIN routines ON routines.id = routine_days.routine_id
-        WHERE routine_days.id = exercises.routine_day_id
-        AND routines.user_id = auth.uid()::text
-    ));
-
-CREATE POLICY "Users can update exercises of their routine days"
-    ON exercises FOR UPDATE
-    USING (EXISTS (
-        SELECT 1 FROM routine_days
-        JOIN routines ON routines.id = routine_days.routine_id
-        WHERE routine_days.id = exercises.routine_day_id
-        AND routines.user_id = auth.uid()::text
-    ));
-
-CREATE POLICY "Users can delete exercises of their routine days"
-    ON exercises FOR DELETE
-    USING (EXISTS (
-        SELECT 1 FROM routine_days
-        JOIN routines ON routines.id = routine_days.routine_id
-        WHERE routine_days.id = exercises.routine_day_id
-        AND routines.user_id = auth.uid()::text
-    ));
-
--- Function to get the requesting user id from auth.uid()
-CREATE OR REPLACE FUNCTION auth.requesting_user_id()
-RETURNS TEXT AS $$
-  SELECT COALESCE(auth.uid()::text, '');
-$$ LANGUAGE sql STABLE;
+    )); 

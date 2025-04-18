@@ -1,31 +1,30 @@
-import type { Metadata } from 'next'
-import localFont from 'next/font/local'
+import { Inter } from 'next/font/google'
+import { Toaster } from '@/components/ui/toaster'
+import { AuthProvider } from '@/components/providers/auth-provider'
 import './globals.css'
 
-const geistSans = localFont({
-  src: './fonts/GeistVF.woff',
-  variable: '--font-geist-sans',
-  weight: '100 900',
-})
-const geistMono = localFont({
-  src: './fonts/GeistMonoVF.woff',
-  variable: '--font-geist-mono',
-  weight: '100 900',
-})
+const inter = Inter({ subsets: ['latin'] })
 
-export const metadata: Metadata = {
-  title: 'CodeGuide Starter Lite',
-  description: 'Starter kit from codeguide.dev',
+export const metadata = {
+  title: 'GymRoutine - Your Personal Training Plan',
+  description: 'Create and track your personalized gym training routines based on your goals and experience level.',
 }
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
+}) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
-    </html>
+    <AuthProvider>
+      <html lang="en">
+        <body className={inter.className}>
+          <main className="min-h-screen bg-background">
+            {children}
+          </main>
+          <Toaster />
+        </body>
+      </html>
+    </AuthProvider>
   )
 }
