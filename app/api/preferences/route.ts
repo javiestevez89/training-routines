@@ -134,7 +134,7 @@ export async function POST(request: Request) {
 
     // Set the cookie with explicit domain
     const cookieOptions = {
-      name: 'user_email',
+      name: 'user-email',
       value: preferences.email,
       path: '/',
       httpOnly: false, // Make it accessible to JavaScript

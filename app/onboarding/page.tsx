@@ -343,11 +343,6 @@ export default function OnboardingPage() {
     try {
       setLoading(true)
       
-      // Clear any previous logs
-      console.clear()
-      console.log('%c Onboarding Submission Started ', 'background: #222; color: #bada55')
-      console.log('Submitting preferences:', answers)
-      
       // Save preferences
       const response = await fetch('/api/preferences', {
         method: 'POST',
@@ -358,81 +353,18 @@ export default function OnboardingPage() {
       })
 
       const data = await response.json()
-      console.log('%c API Response ', 'background: #222; color: #bada55', data)
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to save preferences')
       }
 
-      // Add a delay to ensure the database write is complete
-      console.log('%c Waiting for database write to complete... ', 'background: #222; color: #bada55')
-      await new Promise<void>(resolve => setTimeout(resolve, 2000))
+      // Show success loading state for 3 seconds
+      setCurrentStep(-1) // Special step for loading state
+      await new Promise(resolve => setTimeout(resolve, 3000))
 
-      // Verify the preferences were saved by making a test query
-      const testResponse = await fetch(`/api/preferences?email=${encodeURIComponent(answers.email)}`, {
-        method: 'GET',
-      })
-      
-      const testData = await testResponse.json()
-      console.log('%c Verifying preferences were saved: ', 'background: #222; color: #bada55', testData)
-
-      if (!testResponse.ok || !testData) {
-        throw new Error('Failed to verify preferences were saved')
-      }
-
-      // Add a longer delay and show countdown
-      console.log('%c Starting 10 second countdown before redirect... ', 'background: #222; color: #bada55')
-      
-      await new Promise<void>((resolve) => {
-        let count = 10
-        const interval = setInterval(() => {
-          // Check if cookie exists
-          const allCookies = document.cookie
-          const userEmailCookie = allCookies
-            .split('; ')
-            .find(row => row.startsWith('user_email='))
-          
-          console.log(
-            `%c COUNTDOWN: ${count} SECONDS REMAINING `,
-            'background: #222; color: #bada55; font-size: 14px; font-weight: bold;'
-          )
-          console.log({
-            allCookies: allCookies || 'none',
-            userEmailCookie: userEmailCookie || 'not found',
-            cookieValue: userEmailCookie?.split('=')[1] || 'none'
-          })
-          
-          count--
-          if (count < 0) {
-            clearInterval(interval)
-            resolve()
-          }
-        }, 1000)
-      })
-
-      console.log('%c Countdown completed! ', 'background: #222; color: #bada55')
-
-      // Store debug info in sessionStorage to persist through redirect
-      const debugInfo = {
-        timestamp: new Date().toISOString(),
-        preferences: answers,
-        apiResponse: data,
-        finalCookieStatus: {
-          allCookies: document.cookie,
-          userEmailCookie: document.cookie
-            .split('; ')
-            .find(row => row.startsWith('user_email=')),
-        }
-      }
-
-      console.log('%c Storing debug info before redirect: ', 'background: #222; color: #bada55', debugInfo)
-      sessionStorage.setItem('onboardingDebug', JSON.stringify(debugInfo))
-
-      // Use window.location for a full page navigation
-      console.log('%c 🚀 Redirecting to dashboard NOW! 🚀 ', 'background: #222; color: #bada55; font-size: 16px; font-weight: bold;')
-      window.location.href = '/dashboard'
+      // Redirect to preview page
+      window.location.href = '/preview'
     } catch (error) {
-      console.error('%c Error: ', 'background: #222; color: #ff0000', error)
       setError(error instanceof Error ? error.message : 'Failed to save preferences')
     } finally {
       setLoading(false)
@@ -492,6 +424,44 @@ export default function OnboardingPage() {
     const email = e.target.value
     setAnswers(prev => ({ ...prev, email }))
     validateEmail(email)
+  }
+
+  // Special loading state when currentStep is -1
+  if (currentStep === -1) {
+    return (
+      <div className="flex min-h-[100svh] items-center justify-center bg-gradient-to-b from-background to-muted/50">
+        <div className="mx-auto max-w-md space-y-8 text-center">
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/10"
+          >
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </motion.div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-semibold tracking-tight">Getting Everything Ready</h2>
+            <p className="text-muted-foreground">
+              We're preparing your personalized workout plan. Just a moment...
+            </p>
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <p className="text-sm text-muted-foreground">Preferences saved successfully</p>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <p className="text-sm text-muted-foreground">Creating your custom plan</p>
+            </div>
+            <div className="flex items-center justify-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <p className="text-sm text-muted-foreground">Setting up your dashboard</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
